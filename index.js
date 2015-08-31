@@ -17,7 +17,9 @@ var c = new Crawler({
 });
 
 var log = function(obj){
-    console.log(obj);
+    if ( debug ){
+        console.log(obj);
+    }
 };
 /*// Queue just one URL, with default callback
 c.queue('http://joshfire.com');
