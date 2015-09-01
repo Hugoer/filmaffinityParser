@@ -1,7 +1,11 @@
 var Crawler = require("crawler"),
     $ = require('cheerio'),
     config = require('./config.json'),
-    jsonfile = require('jsonfile');
+    jsonfile = require('jsonfile'),
+    fs = require('fs'),
+    request = require('request'),
+    giSearch = require('google-images2'),
+    moment = require('moment');
 
 var c = new Crawler({
     maxConnections : 10,
@@ -21,13 +25,53 @@ var log = function(obj){
         console.log(obj);
     }
 };
+
+var downloadThumbnail = function(uri, name ,callback){
+    
+    callback = callback || function( ){ };
+
+    if ( config.downloadImages ){
+
+        if ( uri ){
+
+            request.head(uri, function(err, res, body){
+
+                if ( err ){
+                    
+                    log(err);
+
+                }else{
+                    console.log('content-type:', res.headers['content-type']);
+                    console.log('content-length:', res.headers['content-length']);
+
+                    var stream = request(uri);
+                    stream.pipe(
+                        fs.createWriteStream('./IMG/'+name)
+                            .on('error', function(){
+                                stream.read();
+                            })
+                        )
+                    .on('close', function() {
+                        callback('Done!');
+                    });                    
+
+                }
+
+            });
+
+        }
+
+    }
+
+};
+
 /*// Queue just one URL, with default callback
 c.queue('http://joshfire.com');
 
 // Queue a list of URLs
 c.queue(['http://jamendo.com/','http://tedxparis.com']);*/
 
-function Film( filmDirector, filmTitle, filmActors, genres, topic, synopsis, originalTitle, year, country ){
+function Film( filmDirector, filmTitle, filmActors, genres, topic, synopsis, originalTitle, year, country, rating, ratingCount ){
 
     this._director = filmDirector;
     this._title = filmTitle;
@@ -39,6 +83,9 @@ function Film( filmDirector, filmTitle, filmActors, genres, topic, synopsis, ori
     this._originalTitle = originalTitle;
     this._year = year;
     this._country = country;
+    this._rating = rating;
+    this._ratingCount = ratingCount;
+    this._lastUpdate = moment.utc().format();
 
     this.getActors = function(){
         return JSON.stringify(this._actors);
@@ -135,7 +182,7 @@ var getAllFilmsUrls = function(){
 
 };
 
-getAllFilmsUrls();
+// getAllFilmsUrls();
 
 var getDataFromUrl = function( url ){
     log(url);
@@ -154,7 +201,10 @@ var getDataFromUrl = function( url ){
                 synopsis,
                 originalTitle,
                 year,
-                country;
+                country,
+                rating,
+                ratingCount,
+                thumbnailName;
 
             if (error) {
                 log(error);
@@ -169,6 +219,9 @@ var getDataFromUrl = function( url ){
                     originalTitle = $($('.movie-info dd')[0]).text().trim();
                     year = $($($('.movie-info')[0]).find('dd[itemprop="datePublished"]')[0]).text();
                     country = $('#country-img').parent().text().trim();
+                    rating = $('#movie-rat-avg').text().trim();
+                    ratingCount = $('#movie-count-rat span').text();
+                    thumbnailName = $('#movie-main-image-container img').attr('src');
 
                     for (var i = 0; i < $actors.length; i++) {
                         actorsList.push( $($actors[i]).text().trim() );
@@ -184,20 +237,31 @@ var getDataFromUrl = function( url ){
 
                     var film = new Film( 
                                     $('.directors span a span').text() ,
-                                     $('#main-title span').text(),
-                                     actorsList,
-                                     genresList,
-                                     topicsList,
-                                     synopsis,
-                                     originalTitle,
-                                     year,
-                                     country
+                                    $('#main-title span').text(),
+                                    actorsList,
+                                    genresList,
+                                    topicsList,
+                                    synopsis,
+                                    originalTitle,
+                                    year,
+                                    country,
+                                    rating,
+                                    ratingCount
                                 );
-                    // log( $($('.movie-info dd')[0]).text().trim() );
+
                     log( film.toString() );
-                    // log( JSON.stringify(film) );
-                    // log('');
+
+                    thumbnailName = thumbnailName.substring(thumbnailName.lastIndexOf('/')+1,thumbnailName.length);
+
+                    if ( config.downloadImages ){
+                        giSearch.search( originalTitle + ' ' + year + ' filmaffinity', function (err, images) {
+                            // log(images[0].unescapedUrl);
+                            downloadThumbnail( images[0].unescapedUrl, thumbnailName );
+                        });
+                    }
+
                     jsonfile.writeFileSync( config.pathFile + originalTitle.split(' ').join('_') + '.JSON' , film);
+
                 }catch(err){
                     log ('Error: ' + err);
                 }
@@ -209,7 +273,8 @@ var getDataFromUrl = function( url ){
 };
 
 
-getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
+// getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
+getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
 
 //Realizar búsqueda por película:
 /*c.queue({
@@ -233,7 +298,6 @@ getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
     }  
 });*/
 /*
-Obtener rating + número de votantes. +  imágen miniatura.
 Crear fichero log ( Hora Inicio + cambio de 'character' + Hora Fin )
 Diferenciar entre series y películas.
 */

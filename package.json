@@ -6,8 +6,12 @@
   "license": "MIT",
   "homepage": "http://www.hugoer.com",
   "dependencies": {
-    "crawler" : "~0.4.3",
-    "cheerio " : "~0.19.0",
-    "jsonfile" : "~2.2.1"
+    "cheerio ": "~0.19.0",
+    "crawler": "~0.4.3",
+    "fs": "0.0.2",
+    "jsonfile": "~2.2.1",
+    "request": "~2.61.0",
+    "google-images2 " : "~0.1.0",
+    "moment" : "~2.10.6"
   }
 }
