@@ -17,7 +17,7 @@ var c = new Crawler({
 });
 
 var log = function(obj){
-    if ( debug ){
+    if ( config.debug ){
         console.log(obj);
     }
 };
@@ -233,5 +233,7 @@ getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
     }  
 });*/
 /*
+Obtener rating + número de votantes. +  imágen miniatura.
+Crear fichero log ( Hora Inicio + cambio de 'character' + Hora Fin )
 Diferenciar entre series y películas.
 */
