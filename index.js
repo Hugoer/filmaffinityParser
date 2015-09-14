@@ -5,7 +5,8 @@ var Crawler = require("crawler"),
     fs = require('fs'),
     request = require('request'),
     giSearch = require('google-images2'),
-    moment = require('moment');
+    moment = require('moment'),
+    exec = require('child_process').exec;
 
 var c = new Crawler({
     maxConnections : 10,
@@ -24,6 +25,14 @@ var log = function(obj){
     if ( config.debug ){
         console.log(obj);
     }
+};
+function run_cmd(cmd, args, callBack ) {
+    var spawn = require('child_process').spawn;
+    var child = spawn(cmd, args);
+    var resp = "";
+
+    child.stdout.on('data', function (buffer) { resp += buffer.toString() });
+    child.stdout.on('end', function() { callBack (resp) });
 };
 
 var downloadThumbnail = function(uri, name ,callback){
@@ -198,6 +207,7 @@ var getDataFromUrl = function( url ){
                 actorsList = [],
                 genresList = [],
                 topicsList = [],
+                title,
                 synopsis,
                 originalTitle,
                 year,
@@ -215,6 +225,7 @@ var getDataFromUrl = function( url ){
                     $genres = $($('.movie-info')[0]).find('a[href*="/es/moviegenre.php?genre"]');
                     $topics = $($('.movie-info')[0]).find('a[href*="/es/movietopic.php?topic"]');
 
+                    title = $('#main-title span').text();
                     synopsis = $($($('.movie-info')[0]).find('dd').last()[0]).text();
                     originalTitle = $($('.movie-info dd')[0]).text().trim();
                     year = $($($('.movie-info')[0]).find('dd[itemprop="datePublished"]')[0]).text();
@@ -237,7 +248,7 @@ var getDataFromUrl = function( url ){
 
                     var film = new Film( 
                                     $('.directors span a span').text() ,
-                                    $('#main-title span').text(),
+                                    title,
                                     actorsList,
                                     genresList,
                                     topicsList,
@@ -254,13 +265,19 @@ var getDataFromUrl = function( url ){
                     thumbnailName = thumbnailName.substring(thumbnailName.lastIndexOf('/')+1,thumbnailName.length);
 
                     if ( config.downloadImages ){
-                        giSearch.search( originalTitle + ' ' + year + ' filmaffinity', function (err, images) {
-                            // log(images[0].unescapedUrl);
-                            downloadThumbnail( images[0].unescapedUrl, thumbnailName );
+                        giSearch.search( title + ' ' + year + ' filmaffinity', function (err, images) {
+                            
+                            if ( images[0] ){
+                                // downloadThumbnail( images[0].unescapedUrl, thumbnailName );
+                                run_cmd( "wget", [images[0].unescapedUrl], function(text) { console.log ('descarga hecha: ' + images[0].unescapedUrl ) });
+                            }
                         });
                     }
 
                     jsonfile.writeFileSync( config.pathFile + originalTitle.split(' ').join('_') + '.JSON' , film);
+
+                    log(db);
+                    db.Film.insert(film);
 
                 }catch(err){
                     log ('Error: ' + err);
@@ -272,6 +289,29 @@ var getDataFromUrl = function( url ){
     });    
 };
 
+if (!global.hasOwnProperty('db')) {
+    console.log('hasOwnProperty');
+  var mongoose = require('mongoose');
+
+  var dbName = 'test'
+
+  // the application is executed on the local machine ...
+  mongoose.connect('mongodb://localhost/' + dbName);
+
+
+  global.db = {
+
+    mongoose: mongoose,
+
+    //models
+    Film:           require('./models/film')(mongoose),
+
+    // agregar más modelos aquí en caso de haberlos
+  };
+
+}
+
+module.exports = global.db;
 
 // getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
 getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
