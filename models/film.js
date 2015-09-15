@@ -1,5 +1,3 @@
-exports = module.exports = function(app, mongoose) {
-
   var mongoose = require('mongoose'),
       Schema   = mongoose.Schema;
 
@@ -17,6 +15,6 @@ exports = module.exports = function(app, mongoose) {
     ratingCount:    Number
   });
 
-  mongoose.model('FilmSchema', filmSchema);
-
-};
+  var Film = mongoose.model('Film', filmSchema);
+  
+  module.exports = Film;

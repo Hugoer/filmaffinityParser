@@ -276,8 +276,39 @@ var getDataFromUrl = function( url ){
 
                     jsonfile.writeFileSync( config.pathFile + originalTitle.split(' ').join('_') + '.JSON' , film);
 
-                    log(db);
-                    db.Film.insert(film);
+                    var mongoose = require('mongoose');
+                    mongoose.connect('mongodb://localhost:27017/films');
+
+                    var db = mongoose.connection;
+
+                    db.on('error', function (err) {
+                        console.log('connection error', err);
+                    });
+                    db.once('open', function () {
+                        console.log('connected.');
+                    });
+
+                    var myFilm = require('./models/film');
+                    var myFilm = new myFilm(
+                        {
+                            "_director":"Alfonso Cuarón",
+                        "_title":"Harry Potter y el prisionero de Azkaban ",
+                        "_actors":["Daniel Radcliffe","Rupert Grint","Emma Watson","David Thewlis","Michael Gambon","Robbie Coltrane","Alan Rickman","Gary Oldman","Tom Felton","Timothy Spall","Emma Thompson","Maggie Smith","Pam Ferris","Mark Williams","Richard Griffiths","Robert Hardy","Matthew Lewis","Lee Ingleby","Dawn French","Julie Christie","Fiona Shaw","Oliver Phelps","James Phelps","Devon Murray"],
+                        "_genres":["Fantástico","Aventuras","Drama"],
+                        "_topics":["Magia","Viajes en el tiempo","Hombres lobo","Secuela"],
+                        "_synopsis":"Cuando Harry Potter y sus amigos vuelven a Hogwarts para cursar su tercer año de estudios, se ven involucrados en un misterio: de la prisión para magos de Azkaban se ha fugado Sirius Black, un peligroso mago que fue cómplice de Lord Voldemort y que intentará vengarse de Harry Potter. El joven aprendiz de mago contribuyó en gran medida a la condena de Sirius, por lo que hay razones para temer por su vida. (FILMAFFINITY)",
+                        "_originalTitle":"Harry Potter and the Prisoner of Azkaban (Harry Potter 3)",
+                        "_year":"2004",
+                        "_country":"Reino Unido",
+                        "_rating":"6,8",
+                        "_ratingCount":"62.680",
+                        "_lastUpdate":"2015-09-15T22:15:38+00:00"}
+                    );
+
+                    myFilm.save(function( err, data ){
+                        if (err) console.log(err);
+                        else console.log('Saved : ', data );
+                    })
 
                 }catch(err){
                     log ('Error: ' + err);
@@ -288,30 +319,6 @@ var getDataFromUrl = function( url ){
         }  
     });    
 };
-
-if (!global.hasOwnProperty('db')) {
-    console.log('hasOwnProperty');
-  var mongoose = require('mongoose');
-
-  var dbName = 'test'
-
-  // the application is executed on the local machine ...
-  mongoose.connect('mongodb://localhost/' + dbName);
-
-
-  global.db = {
-
-    mongoose: mongoose,
-
-    //models
-    Film:           require('./models/film')(mongoose),
-
-    // agregar más modelos aquí en caso de haberlos
-  };
-
-}
-
-module.exports = global.db;
 
 // getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
 getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
