@@ -82,35 +82,34 @@ c.queue(['http://jamendo.com/','http://tedxparis.com']);*/
 
 function Film( filmDirector, filmTitle, filmActors, genres, topic, synopsis, originalTitle, year, country, rating, ratingCount ){
 
-    this._director = filmDirector;
-    this._title = filmTitle;
-    this._actors = filmActors; 
+    this.director = filmDirector;
+    this.title = filmTitle;
+    this.actors = filmActors; 
+    this.genres = genres;
+    this.topics = topic;
+    this.synopsis = synopsis;
+    this.originalTitle = originalTitle;
+    this.year = year;
+    this.country = country;
+    this.rating = rating.replace(',','.');
+    this.ratingCount = ratingCount;
+    this.lastUpdate = moment.utc().format();
 
-    this._genres = genres;
-    this._topics = topic;
-    this._synopsis = synopsis;
-    this._originalTitle = originalTitle;
-    this._year = year;
-    this._country = country;
-    this._rating = rating;
-    this._ratingCount = ratingCount;
-    this._lastUpdate = moment.utc().format();
+    // this.getActors = function(){
+    //     return JSON.stringify(this._actors);
+    // };
 
-    this.getActors = function(){
-        return JSON.stringify(this._actors);
-    };
-
-    this.toString = function(){
-        // return 'Título: "' + this._title 
-        //     + '" - director: "' + this._director 
-        //     + '" - Sinopsis: "' + this._synopsis 
-        //     + '" - Año: "' + this._year 
-        //     + '" - País: ' + this._country ;
-        return 'Título: "' + this._title 
-            + '" - director: "' + this._director 
-            + '" - Año: "' + this._year 
-            + '" - País: ' + this._country ;        
-    };
+    // this.toString = function(){
+    //     // return 'Título: "' + this._title 
+    //     //     + '" - director: "' + this._director 
+    //     //     + '" - Sinopsis: "' + this._synopsis 
+    //     //     + '" - Año: "' + this._year 
+    //     //     + '" - País: ' + this._country ;
+    //     return 'Título: "' + this._title 
+    //         + '" - director: "' + this._director 
+    //         + '" - Año: "' + this._year 
+    //         + '" - País: ' + this._country ;        
+    // };
 
 };
 
@@ -191,8 +190,6 @@ var getAllFilmsUrls = function(){
 
 };
 
-// getAllFilmsUrls();
-
 var getDataFromUrl = function( url ){
     log(url);
     c.queue({
@@ -200,7 +197,7 @@ var getDataFromUrl = function( url ){
         jQuery: true,
         forceUTF8: true,
         callback: function (error, result, $) {
-            log('InGetDataFromUrl');
+            // log('InGetDataFromUrl');
             var $actors,
                 $genres,
                 $topics,
@@ -260,7 +257,7 @@ var getDataFromUrl = function( url ){
                                     ratingCount
                                 );
 
-                    log( film.toString() );
+                    // log( film.toString() );
 
                     thumbnailName = thumbnailName.substring(thumbnailName.lastIndexOf('/')+1,thumbnailName.length);
 
@@ -281,33 +278,22 @@ var getDataFromUrl = function( url ){
 
                     var db = mongoose.connection;
 
-                    db.on('error', function (err) {
-                        console.log('connection error', err);
-                    });
-                    db.once('open', function () {
-                        console.log('connected.');
-                    });
+                    // db.on('error', function (err) {
+                    //     console.log('connection error', err);
+                    // });
+
+                    // db.on('open', function () {
+                    //     // log('Opennnn');
+                    // });
 
                     var myFilm = require('./models/film');
-                    var myFilm = new myFilm(
-                        {
-                            "_director":"Alfonso Cuarón",
-                        "_title":"Harry Potter y el prisionero de Azkaban ",
-                        "_actors":["Daniel Radcliffe","Rupert Grint","Emma Watson","David Thewlis","Michael Gambon","Robbie Coltrane","Alan Rickman","Gary Oldman","Tom Felton","Timothy Spall","Emma Thompson","Maggie Smith","Pam Ferris","Mark Williams","Richard Griffiths","Robert Hardy","Matthew Lewis","Lee Ingleby","Dawn French","Julie Christie","Fiona Shaw","Oliver Phelps","James Phelps","Devon Murray"],
-                        "_genres":["Fantástico","Aventuras","Drama"],
-                        "_topics":["Magia","Viajes en el tiempo","Hombres lobo","Secuela"],
-                        "_synopsis":"Cuando Harry Potter y sus amigos vuelven a Hogwarts para cursar su tercer año de estudios, se ven involucrados en un misterio: de la prisión para magos de Azkaban se ha fugado Sirius Black, un peligroso mago que fue cómplice de Lord Voldemort y que intentará vengarse de Harry Potter. El joven aprendiz de mago contribuyó en gran medida a la condena de Sirius, por lo que hay razones para temer por su vida. (FILMAFFINITY)",
-                        "_originalTitle":"Harry Potter and the Prisoner of Azkaban (Harry Potter 3)",
-                        "_year":"2004",
-                        "_country":"Reino Unido",
-                        "_rating":"6,8",
-                        "_ratingCount":"62.680",
-                        "_lastUpdate":"2015-09-15T22:15:38+00:00"}
-                    );
+                    var filmInsert = new myFilm(film);
 
-                    myFilm.save(function( err, data ){
+                    filmInsert.save(function( err, data ){
+                        
                         if (err) console.log(err);
-                        else console.log('Saved : ', data );
+                        // log('Close');
+                        db.close();  
                     })
 
                 }catch(err){
@@ -320,8 +306,10 @@ var getDataFromUrl = function( url ){
     });    
 };
 
+getAllFilmsUrls();
+
 // getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
-getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
+//getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
 
 //Realizar búsqueda por película:
 /*c.queue({
