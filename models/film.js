@@ -1,20 +1,11 @@
-  var mongoose = require('mongoose'),
-      Schema   = mongoose.Schema;
+var mongoose = require('mongoose'),
+  Schema   = mongoose.Schema;
 
-  var filmSchema = new Schema({
-    title:          String ,
-    director:       String ,
-    actors:         [String],
-    genres:         [String],
-    topic:          String,
-    synopsis:       String,
-    originalTitle:  String,
-    year:           Number,
-    country:        String,
-    rating:         Number,
-    ratingCount:    Number
-  });
+var filmSchema = new Schema({
+  idFilm:         String,
+  lastUpdate:     { type: Date, default: Date.now }
+});
 
-  var Film = mongoose.model('Film', filmSchema);
-  
-  module.exports = Film;
+var Film = mongoose.model('Film', filmSchema);
+
+module.exports = Film;

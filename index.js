@@ -94,52 +94,89 @@ function Film( filmDirector, filmTitle, filmActors, genres, topic, synopsis, ori
     this.rating = rating.replace(',','.');
     this.ratingCount = ratingCount;
     this.lastUpdate = moment.utc().format();
-
-    // this.getActors = function(){
-    //     return JSON.stringify(this._actors);
-    // };
-
-    // this.toString = function(){
-    //     // return 'Título: "' + this._title 
-    //     //     + '" - director: "' + this._director 
-    //     //     + '" - Sinopsis: "' + this._synopsis 
-    //     //     + '" - Año: "' + this._year 
-    //     //     + '" - País: ' + this._country ;
-    //     return 'Título: "' + this._title 
-    //         + '" - director: "' + this._director 
-    //         + '" - Año: "' + this._year 
-    //         + '" - País: ' + this._country ;        
-    // };
-
 };
 
 var filmAffinitySearch = function( title ){
     return 'http://www.filmaffinity.com/es/search.php?stype=title&stext=' + encodeURIComponent( title );
 };
 
-var getLengthByIndex = function( character ){
-    var urlDummie = config.urlMain + character + '_1.html'
-    c.queue({
-      uri: urlDummie,
-        jQuery: true,
-        forceUTF8: true,
-        callback: function (error, result, $) {
-            return 
-        }
-    });    
-};
+// var getLengthByIndex = function( character ){
+//     var urlDummie = config.urlMain + character + '_1.html'
+//     c.queue({
+//       uri: urlDummie,
+//         jQuery: true,
+//         forceUTF8: true,
+//         callback: function (error, result, $) {
+//             return 
+//         }
+//     });    
+// };
+
+// insertIdFilm = function( idFilm ){
+//     var mongoose = require('mongoose');
+//     mongoose.connect('mongodb://localhost:27017/films');
+
+//     var db = mongoose.connection;
+
+//     // db.on('error', function (err) {
+//     //     console.log('connection error', err);
+//     // });
+
+//     // db.on('open', function () {
+//     //     // log('Opennnn');
+//     // });
+
+//     var myFilm = require('./models/film');
+//     var filmInsert = new myFilm(idFilm);
+
+//     filmInsert.save(function( err, data ){
+        
+//         if (err) console.log(err);
+//         // log('Close');
+//         db.close();  
+//     })
+// };
 
  getAllFilmsByCharacter = function( character, index ){
+    var urlHtmlIndex = config.urlMain + character + '_'+ index + '.html';
+    log(urlHtmlIndex);
     c.queue({
-      uri: config.urlMain + character + '_'+ index + '.html' ,
+      uri:  urlHtmlIndex,
         jQuery: true,
         forceUTF8: true,
         callback: function (error, result, $) {
-
+            var url = '';
             // log(result);
             $('.fa-shadow').each(function(index, a) {
-                var url = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
-                getDataFromUrl( url );
+                // url = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
+                // getDataFromUrl( url );
+
+                // url = $('.fa-shadow .movie-card').data('movie-id');
+                url = $(a).find('.movie-card').data('movie-id');
+                log(url);
+
+                var mongoose = require('mongoose');
+                mongoose.connect('mongodb://localhost:27017/films');
+
+                var db = mongoose.connection;
+
+                // db.on('error', function (err) {
+                //     console.log('connection error', err);
+                // });
+
+                // db.on('open', function () {
+                //     // log('Opennnn');
+                // });
+
+                var myFilm = require('./models/film');
+                var filmInsert = new myFilm({idFilm: url});
+
+                filmInsert.save(function( err, data ){
+                    
+                    if (err) console.log(err);
+                    log('Close');
+                    db.close();  
+                })
             });
 
         }
@@ -155,37 +192,40 @@ var getAllFilmsUrls = function(){
     //la parte '0-9' es la que se guarda en urlIndexGeneral.
     //la parte '1' es un contador que dependerá del resultado actual, habrá que capturarlo.
     for (var i = 0; i < urlIndexGeneral.length; i++) {
-        
-        //Cogemos la primera página de cada caracter para poder conocer cuántas páginas hay de películas que empiecen por ese caracter.
-        c.queue({
-          uri: config.urlMain + urlIndexGeneral[i] + '_' + '_1.html' ,
-            jQuery: true,
-            forceUTF8: true,
-            callback: function (error, result, $) {
+        if (!!urlIndexGeneral[i]){
+            var urlHtml = config.urlMain + urlIndexGeneral[i] + '_1.html'
+            log('urlIndexGeneral - ' + urlHtml);
+            //Cogemos la primera página de cada caracter para poder conocer cuántas páginas hay de películas que empiecen por ese caracter.
+            c.queue({
+              uri:  urlHtml,
+                jQuery: true,
+                forceUTF8: true,
+                callback: function (error, result, $) {
 
-                var lastIndex = $($('.pager')[0]).find('a').eq(-2).text();
-                var characterHref = $($('.pager')[0]).find('a').eq(-2).attr('href');
-                var indexSeparator = 0;
+                    var lastIndex = $($('.pager')[0]).find('a').eq(-2).text();
+                    var characterHref = $($('.pager')[0]).find('a').eq(-2).attr('href');
+                    var indexSeparator = 0,
+                        chr = '';
 
-                if ( characterHref ){
+                    if ( characterHref ){
 
-                    characterHref = characterHref.replace('allfilms_','');
-                    indexSeparator = characterHref.indexOf('_');
-                    characterHref = characterHref.substring(0,indexSeparator);
+                        characterHref = characterHref.replace('allfilms_','');
+                        indexSeparator = characterHref.indexOf('_');
+                        chr = characterHref.substring(0,indexSeparator);
 
-                    if (lastIndex) {
-                        
-                        for (var j = 0; j < lastIndex; j++) {
-                            log( characterHref + ' - ' + j + ' - ' + lastIndex );
-                            getAllFilmsByCharacter( characterHref, j );
-                        };
+                        if (lastIndex) {
+                            
+                            for (var j = 0; j < lastIndex; j++) {
+                                log(indexSeparator  + ' - ' + chr + ' - ' + j + ' - ' + lastIndex );
+                                getAllFilmsByCharacter( chr, j );
+                            };
+                        }
+
                     }
 
                 }
-
-            }
-        });
-
+            });
+        }
     };
 
 };
@@ -286,7 +326,7 @@ var getDataFromUrl = function( url ){
                     //     // log('Opennnn');
                     // });
 
-                    var myFilm = require('./models/film');
+                    var myFilm = require('./models/filmDet');
                     var filmInsert = new myFilm(film);
 
                     filmInsert.save(function( err, data ){
@@ -309,7 +349,7 @@ var getDataFromUrl = function( url ){
 getAllFilmsUrls();
 
 // getDataFromUrl('http://www.filmaffinity.com//es/film186215.html');
-//getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
+// getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
 
 //Realizar búsqueda por película:
 /*c.queue({
