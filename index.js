@@ -8,19 +8,6 @@ var Crawler = require("crawler"),
     moment = require('moment'),
     exec = require('child_process').exec;
 
-var c = new Crawler({
-    maxConnections : 10,
-    // This will be called for each crawled page
-    callback : function (error, result, $) {
-        // $ is Cheerio by default
-        //a lean implementation of core jQuery designed specifically for the server
-        $('a').each(function(index, a) {
-            var toQueueUrl = $(a).attr('href');
-            c.queue(toQueueUrl);
-        });
-    }
-});
-
 var log = function(obj){
     if ( config.debug ){
         console.log(obj);
@@ -137,56 +124,191 @@ var filmAffinitySearch = function( title ){
 //     })
 // };
 
- getAllFilmsByCharacter = function( character, index ){
-    var urlHtmlIndex = config.urlMain + character + '_'+ index + '.html';
-    log(urlHtmlIndex);
-    c.queue({
-      uri:  urlHtmlIndex,
+
+getAllUrl = function( urlFilmList ){
+    log('getAllUrl - urlFilmList.length : ' + urlFilmList.length );
+    var filmList = [];
+    var c = new Crawler({
+        maxConnections : config.maxConnections,
         jQuery: true,
         forceUTF8: true,
         callback: function (error, result, $) {
-            var url = '';
-            // log(result);
-            $('.fa-shadow').each(function(index, a) {
-                // url = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
-                // getDataFromUrl( url );
+            var $actors,
+                $genres,
+                $topics,
+                actorsList = [],
+                genresList = [],
+                topicsList = [],
+                title,
+                synopsis,
+                originalTitle,
+                year,
+                country,
+                rating,
+                ratingCount,
+                thumbnailName;
 
-                // url = $('.fa-shadow .movie-card').data('movie-id');
-                url = $(a).find('.movie-card').data('movie-id');
-                log(url);
+            if (error) {
+                log(error);
+            }else{
+                // log('InGetDataFromUrl');
+                try{
+                    $actors = $($('.movie-info')[0]).find('a[href*="/es/search.php?stype=cast"]');
+                    $genres = $($('.movie-info')[0]).find('a[href*="/es/moviegenre.php?genre"]');
+                    $topics = $($('.movie-info')[0]).find('a[href*="/es/movietopic.php?topic"]');
 
-                var mongoose = require('mongoose');
-                mongoose.connect('mongodb://localhost:27017/films');
+                    title = $('#main-title span').text();
+                    synopsis = $($($('.movie-info')[0]).find('dd').last()[0]).text();
+                    originalTitle = $($('.movie-info dd')[0]).text().trim();
+                    year = $($($('.movie-info')[0]).find('dd[itemprop="datePublished"]')[0]).text();
+                    country = $('#country-img').parent().text().trim();
+                    rating = $('#movie-rat-avg').text().trim();
+                    ratingCount = $('#movie-count-rat span').text();
+                    thumbnailName = $('#movie-main-image-container img').attr('src');
 
-                var db = mongoose.connection;
+                    for (var i = 0; i < $actors.length; i++) {
+                        actorsList.push( $($actors[i]).text().trim() );
+                    };
 
-                // db.on('error', function (err) {
-                //     console.log('connection error', err);
-                // });
+                    for (var i = 0; i < $genres.length; i++) {
+                        genresList.push( $($genres[i]).text().trim() );
+                    };
 
-                // db.on('open', function () {
-                //     // log('Opennnn');
-                // });
+                    for (var i = 0; i < $topics.length; i++) {
+                        topicsList.push( $($topics[i]).text().trim() );
+                    };                
 
-                var myFilm = require('./models/film');
-                var filmInsert = new myFilm({idFilm: url});
+                    log('Recogiendo datos de: ' + title);
 
-                filmInsert.save(function( err, data ){
-                    
-                    if (err) console.log(err);
-                    log('Close');
-                    db.close();  
-                })
-            });
+                    var film = new Film( 
+                                    $('.directors span a span').text() ,
+                                    title,
+                                    actorsList,
+                                    genresList,
+                                    topicsList,
+                                    synopsis,
+                                    originalTitle,
+                                    year,
+                                    country,
+                                    rating,
+                                    ratingCount
+                                );
 
+                    // log( film.toString() );
+
+                    thumbnailName = thumbnailName.substring(thumbnailName.lastIndexOf('/')+1,thumbnailName.length);
+
+                    if ( config.downloadImages ){
+                        giSearch.search( title + ' ' + year + ' filmaffinity', function (err, images) {
+                            
+                            if ( images[0] ){
+                                // downloadThumbnail( images[0].unescapedUrl, thumbnailName );
+                                run_cmd( "wget", [images[0].unescapedUrl], function(text) { console.log ('descarga hecha: ' + images[0].unescapedUrl ) });
+                            }
+                        });
+                    }
+
+                    // jsonfile.writeFileSync( config.pathFile + originalTitle.split(' ').join('_') + '.JSON' , film);
+                    //film
+                    filmList.push(film);
+
+                }catch(err){
+                    log ('Error: ' + err);
+                }
+
+            }
+        },
+        onDrain: function(){
+            log('onDrain - getAllUrl');
+            var mongoose = require('mongoose');
+            mongoose.connect('mongodb://localhost:27017/films');
+
+            var db = mongoose.connection;
+
+            var myFilmDet = require('./models/filmDet');
+            //movieId inserta tooooodos los ids pero en un campo y separados por comas.
+            var filmInsert;
+            var res = [];
+
+            for (var i = 0; i < filmList.length; i++) {
+                log('Inserting: ' + filmList[i].title );
+                filmInsert = new myFilmDet( filmList[i] );
+                filmInsert.save(function (err) {
+                    res.push(err);
+                });                
+            };
+            
+            db.close();
+
+            if ( res.length > 0  ) log(res);
         }
     });
+
+    c.queue(urlFilmList);    
+}
+
+getAllFilmsByCharacter = function( urlHtmlIndex ){    
+    log('urlHtmlIndex on getAllFilmsByCharacter : ' + urlHtmlIndex.length );
+    var movieId = [];
+    var c = new Crawler({
+        maxConnections : config.maxConnections,
+        jQuery: true,
+        forceUTF8: true,
+        callback: function (error, result, $) {
+            var movieUrl = '';
+            // log(result);
+            $('.fa-shadow').each(function(index, a) {
+                // movieUrl = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
+                // getDataFromUrl( movieUrl );
+                log('index - ' + index);
+                // url = $('.fa-shadow .movie-card').data('movie-id');
+                movieUrl = $(a).find('.movie-card').data('movie-id');
+                log(config.urlFilm + movieUrl + '.html');
+                
+                movieId.push( config.urlFilm + movieUrl + '.html');       
+
+            });
+
+        },
+        onDrain: function(){
+            
+            // log('movieId on getAllFilmsByCharacter.onDrain : ' + movieId.length );
+            // var mongoose = require('mongoose');
+            // mongoose.connect('mongodb://localhost:27017/films');
+
+            // var db = mongoose.connection;
+
+            // var myFilm = require('./models/film');
+            // //movieId inserta tooooodos los ids pero en un campo y separados por comas.
+            // var filmInsert = new myFilm({idFilm: movieId});
+            // var res = [];
+
+            // movieId.forEach(function (item) {
+            //     log('Inserting: ' + item );
+            //     filmInsert = new myFilm( {idFilm: item });
+            //     filmInsert.save(function (err) {
+            //         res.push(err);
+            //     });
+            // });
+            
+            // db.close();
+
+            // if ( res.length > 0  ) log(res);
+            getAllUrl ( movieId );
+        }
+    });
+
+    c.queue(urlHtmlIndex);
 };
+
+
 
 var getAllFilmsUrls = function(){
 
     var urlIndexGeneral = config.filmsPagination.split('@'),
-        url;
+        url = '',
+        filmsUrls = []
+        filmId = [];
 
     //http://www.filmaffinity.com/es/allfilms_0-9_1.html
     //la parte '0-9' es la que se guarda en urlIndexGeneral.
@@ -196,37 +318,52 @@ var getAllFilmsUrls = function(){
             var urlHtml = config.urlMain + urlIndexGeneral[i] + '_1.html'
             log('urlIndexGeneral - ' + urlHtml);
             //Cogemos la primera página de cada caracter para poder conocer cuántas páginas hay de películas que empiecen por ese caracter.
-            c.queue({
-              uri:  urlHtml,
-                jQuery: true,
-                forceUTF8: true,
-                callback: function (error, result, $) {
-
-                    var lastIndex = $($('.pager')[0]).find('a').eq(-2).text();
-                    var characterHref = $($('.pager')[0]).find('a').eq(-2).attr('href');
-                    var indexSeparator = 0,
-                        chr = '';
-
-                    if ( characterHref ){
-
-                        characterHref = characterHref.replace('allfilms_','');
-                        indexSeparator = characterHref.indexOf('_');
-                        chr = characterHref.substring(0,indexSeparator);
-
-                        if (lastIndex) {
-                            
-                            for (var j = 0; j < lastIndex; j++) {
-                                log(indexSeparator  + ' - ' + chr + ' - ' + j + ' - ' + lastIndex );
-                                getAllFilmsByCharacter( chr, j );
-                            };
-                        }
-
-                    }
-
-                }
-            });
+            filmsUrls.push(urlHtml);
         }
     };
+    
+
+
+    var c = new Crawler({
+        maxConnections : config.maxConnections,
+        jQuery: true,
+        forceUTF8: true,
+        callback: function (error, result, $) {
+
+            var lastIndex = $($('.pager')[0]).find('a').eq(-2).text();
+            var characterHref = $($('.pager')[0]).find('a').eq(-2).attr('href');
+            var indexSeparator = 0,
+                chr = '';
+
+            if ( characterHref ){
+
+                characterHref = characterHref.replace('allfilms_','');
+                indexSeparator = characterHref.indexOf('_');
+                chr = characterHref.substring(0,indexSeparator);
+
+                if (lastIndex) {
+                    
+                    for (var j = 0; j < lastIndex; j++) {
+                        var urlHtmlIndex = config.urlMain + chr + '_'+ j + '.html';
+                        // log(indexSeparator  + ' - ' + chr + ' - ' + j + ' - ' + lastIndex );
+                        // getAllFilmsByCharacter( urlHtmlIndex );
+                        log(urlHtmlIndex)
+                        filmId.push(urlHtmlIndex);
+                    };
+                }
+
+            }
+
+        },
+        onDrain: function(){
+            getAllFilmsByCharacter( filmId );
+        }
+    });
+
+    log(filmsUrls.length);
+
+    c.queue(filmsUrls);
+
 
 };
 
