@@ -1,10 +1,12 @@
 {
   "debug": true,
   "initialUrl" :"http://www.filmaffinity.com/",
-  "filmsPagination" : "*@0-9@A@B@C@D@E@F@G@H@I@J@K@L@M@N@O@P@Q@R@S@T@U@V@W@X@Y@Z",
+  "filmsPagination" : "A@",
   "urlMain": "http://www.filmaffinity.com/es/allfilms_",
   "urlFilm" : "http://www.filmaffinity.com/es/film",
   "pathFile":"./JSON/",
   "downloadImages" : false,
-  "maxConnections" : 10
+  "maxConnections" : 10,
+  "maxArrayElements" : 500,
+  "userAgent": "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.93 Safari/537.36"
 }

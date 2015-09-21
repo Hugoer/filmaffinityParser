@@ -37,8 +37,8 @@ var downloadThumbnail = function(uri, name ,callback){
                     log(err);
 
                 }else{
-                    console.log('content-type:', res.headers['content-type']);
-                    console.log('content-length:', res.headers['content-length']);
+                    log('content-type:', res.headers['content-type']);
+                    log('content-length:', res.headers['content-length']);
 
                     var stream = request(uri);
                     stream.pipe(
@@ -92,6 +92,7 @@ var filmAffinitySearch = function( title ){
 //     c.queue({
 //       uri: urlDummie,
 //         jQuery: true,
+// userAgent: config.userAgent,
 //         forceUTF8: true,
 //         callback: function (error, result, $) {
 //             return 
@@ -106,7 +107,7 @@ var filmAffinitySearch = function( title ){
 //     var db = mongoose.connection;
 
 //     // db.on('error', function (err) {
-//     //     console.log('connection error', err);
+// log('connection error', err);
 //     // });
 
 //     // db.on('open', function () {
@@ -118,7 +119,7 @@ var filmAffinitySearch = function( title ){
 
 //     filmInsert.save(function( err, data ){
         
-//         if (err) console.log(err);
+// log(err);
 //         // log('Close');
 //         db.close();  
 //     })
@@ -131,6 +132,7 @@ getAllUrl = function( urlFilmList ){
     var c = new Crawler({
         maxConnections : config.maxConnections,
         jQuery: true,
+        userAgent: config.userAgent,
         forceUTF8: true,
         callback: function (error, result, $) {
             var $actors,
@@ -203,7 +205,7 @@ getAllUrl = function( urlFilmList ){
                             
                             if ( images[0] ){
                                 // downloadThumbnail( images[0].unescapedUrl, thumbnailName );
-                                run_cmd( "wget", [images[0].unescapedUrl], function(text) { console.log ('descarga hecha: ' + images[0].unescapedUrl ) });
+                                log ('descarga hecha: ' + images[0].unescapedUrl ) ;
                             }
                         });
                     }
@@ -231,7 +233,7 @@ getAllUrl = function( urlFilmList ){
             var res = [];
 
             for (var i = 0; i < filmList.length; i++) {
-                log('Inserting: ' + filmList[i].title );
+                log('Insertando datos de: ' + filmList[i].title );
                 filmInsert = new myFilmDet( filmList[i] );
                 filmInsert.save(function (err) {
                     res.push(err);
@@ -253,6 +255,7 @@ getAllFilmsByCharacter = function( urlHtmlIndex ){
     var c = new Crawler({
         maxConnections : config.maxConnections,
         jQuery: true,
+        userAgent: config.userAgent,
         forceUTF8: true,
         callback: function (error, result, $) {
             var movieUrl = '';
@@ -260,45 +263,30 @@ getAllFilmsByCharacter = function( urlHtmlIndex ){
             $('.fa-shadow').each(function(index, a) {
                 // movieUrl = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
                 // getDataFromUrl( movieUrl );
-                log('index - ' + index);
-                // url = $('.fa-shadow .movie-card').data('movie-id');
                 movieUrl = $(a).find('.movie-card').data('movie-id');
                 log(config.urlFilm + movieUrl + '.html');
-                
                 movieId.push( config.urlFilm + movieUrl + '.html');       
 
             });
 
         },
         onDrain: function(){
-            
-            // log('movieId on getAllFilmsByCharacter.onDrain : ' + movieId.length );
-            // var mongoose = require('mongoose');
-            // mongoose.connect('mongodb://localhost:27017/films');
 
-            // var db = mongoose.connection;
-
-            // var myFilm = require('./models/film');
-            // //movieId inserta tooooodos los ids pero en un campo y separados por comas.
-            // var filmInsert = new myFilm({idFilm: movieId});
-            // var res = [];
-
-            // movieId.forEach(function (item) {
-            //     log('Inserting: ' + item );
-            //     filmInsert = new myFilm( {idFilm: item });
-            //     filmInsert.save(function (err) {
-            //         res.push(err);
-            //     });
-            // });
-            
-            // db.close();
-
-            // if ( res.length > 0  ) log(res);
-            getAllUrl ( movieId );
+            getAllUrl ( movieId.slice(1,config.maxArrayElements) );
         }
     });
 
-    c.queue(urlHtmlIndex);
+    //== Hacer un bucle para no meter tantísimas llamadas ( es un objeto con 114.000 urls. )
+    //== Poner algo que se sepa el progreso lo más preciso posible.
+    //== Revisar en 0-9 por qué faltan películas en la base de datos.
+    //== Control de errores en "Insertando datos de: "
+    var maxArrayElements = config.maxArrayElements,
+        arraySliced = [];
+
+    arraySpliced = urlHtmlIndex.slice(1,maxArrayElements);
+    log('maxArrayElements ' + maxArrayElements );
+    log('urlHtmlIndex ' + arraySpliced.length);
+    c.queue(arraySpliced);
 };
 
 
@@ -327,9 +315,10 @@ var getAllFilmsUrls = function(){
     var c = new Crawler({
         maxConnections : config.maxConnections,
         jQuery: true,
+        userAgent: config.userAgent,
         forceUTF8: true,
         callback: function (error, result, $) {
-
+            
             var lastIndex = $($('.pager')[0]).find('a').eq(-2).text();
             var characterHref = $($('.pager')[0]).find('a').eq(-2).attr('href');
             var indexSeparator = 0,
@@ -356,7 +345,12 @@ var getAllFilmsUrls = function(){
 
         },
         onDrain: function(){
-            getAllFilmsByCharacter( filmId );
+            if (filmId.length > 0){
+                getAllFilmsByCharacter( filmId );
+            }else{
+                log('No Results on getAllFilmsUrls');
+            }
+            
         }
     });
 
@@ -372,6 +366,7 @@ var getDataFromUrl = function( url ){
     c.queue({
       uri: url,
         jQuery: true,
+        userAgent: config.userAgent,
         forceUTF8: true,
         callback: function (error, result, $) {
             // log('InGetDataFromUrl');
@@ -443,7 +438,7 @@ var getDataFromUrl = function( url ){
                             
                             if ( images[0] ){
                                 // downloadThumbnail( images[0].unescapedUrl, thumbnailName );
-                                run_cmd( "wget", [images[0].unescapedUrl], function(text) { console.log ('descarga hecha: ' + images[0].unescapedUrl ) });
+                                log ('descarga hecha: ' + images[0].unescapedUrl );
                             }
                         });
                     }
@@ -456,7 +451,7 @@ var getDataFromUrl = function( url ){
                     var db = mongoose.connection;
 
                     // db.on('error', function (err) {
-                    //     console.log('connection error', err);
+                    log('connection error', err);
                     // });
 
                     // db.on('open', function () {
@@ -468,7 +463,7 @@ var getDataFromUrl = function( url ){
 
                     filmInsert.save(function( err, data ){
                         
-                        if (err) console.log(err);
+                        log(err);
                         // log('Close');
                         db.close();  
                     })
@@ -489,26 +484,27 @@ getAllFilmsUrls();
 // getDataFromUrl('http://www.filmaffinity.com/es/film832057.html');
 
 //Realizar búsqueda por película:
-/*c.queue({
-  uri: filmAffinitySearch('Harry Potter'),
-    jQuery: true,
-    forceUTF8: true,
-    callback: function (error, result, $) {
+// c.queue({
+//   uri: filmAffinitySearch('Harry Potter'),
+//     jQuery: true,
+//     userAgent: config.userAgent,
+//     forceUTF8: true,
+//     callback: function (error, result, $) {
 
-        var url;
+//         var url;
 
-        if (error) {
-            log(error);
-        }else{
-            log( $('#mt-content-cell #main-title').text() );
-            $('.fa-shadow').each(function(index, a) {
-                url = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
-                getDataFromUrl( url );
-            });
-        }
+//         if (error) {
+//             log(error);
+//         }else{
+//             log( $('#mt-content-cell #main-title').text() );
+//             $('.fa-shadow').each(function(index, a) {
+//                 url = config.initialUrl + $($(a).find('.mc-title a')[0]).attr('href');
+//                 getDataFromUrl( url );
+//             });
+//         }
 
-    }  
-});*/
+//     }  
+// });
 /*
 Crear fichero log ( Hora Inicio + cambio de 'character' + Hora Fin )
 Diferenciar entre series y películas.
