@@ -16,8 +16,8 @@ app.use(bodyParser.json());
 app.use(methodOverride());
 
 // Import Models and controllers
-var models     = require('./models/film')(app, mongoose);
-var FilmCtrl = require('./controllers/film');
+var models     = require('../models/filmDet')(app, mongoose);
+var FilmCtrl = require('../controllers/film');
 
 // Example Route
 var router = express.Router();
@@ -30,13 +30,13 @@ app.use(router);
 var films = express.Router();
 
 films.route('/films')
-  .get(FilmCtrl.findAllFilmSchema)
-  .post(FilmCtrl.addFilmSchema);
+  .get(FilmCtrl.findAllFilm)
+  .post(FilmCtrl.addFilm);
 
-films.route('/films/:id')
-  .get(FilmCtrl.findById)
-  .put(FilmCtrl.updateFilmSchema)
-  .delete(FilmCtrl.deleteFilmSchema);
+// films.route('/films/:id')
+//   .get(FilmCtrl.findById())
+//   .put(FilmCtrl.updateFilm)
+//   .delete(FilmCtrl.deleteFilm);
 
 app.use('/api', films);
 

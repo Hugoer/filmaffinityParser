@@ -1,7 +1,7 @@
 {
   "debug": true,
   "initialUrl" :"http://www.filmaffinity.com/",
-  "filmsPagination" : "D@E@F@G@H@I@J@K@L@M@N@O@P@Q@R@S@T@U@V@W@X@Y@Z",
+  "filmsPagination" : "0-9@A@B@C",
   "urlMain": "http://www.filmaffinity.com/es/allfilms_",
   "urlFilm" : "http://www.filmaffinity.com/es/film",
   "pathFile":"./JSON/",

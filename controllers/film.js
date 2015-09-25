@@ -1,19 +1,19 @@
 //File: controllers/films.js
 var mongoose = require('mongoose');
-var FilmSchema  = mongoose.model('FilmSchema');
+var Film  = mongoose.model('FilmDet');
 
-//GET - Return all filmSchema in the DB
-exports.findAllFilmSchema = function(req, res) {
-	FilmSchema.find(function(err, filmSchema) {
+//GET - Return all Film in the DB
+exports.findAllFilm = function(req, res) {
+	Film.find(function(err, Film) {
     	if(err) res.send(500, err.message);
     	console.log('GET /films')
-		res.status(200).jsonp(filmSchema);
-	});
+		res.status(200).jsonp(Film);
+	}).limit(10);
 };
 
-//GET - Return a FilmSchema with specified ID
+//GET - Return a Film with specified ID
 exports.findById = function(req, res) {
-	FilmSchema.findById(req.params.id, function(err, film) {
+	Film.findById(req.params.id, function(err, film) {
     if(err) return res.send(500, err.message);
 
     console.log('GET /film/' + req.params.id);
@@ -21,12 +21,12 @@ exports.findById = function(req, res) {
 	});
 };
 
-//POST - Insert a new FilmSchema in the DB
-exports.addFilmSchema = function(req, res) {
+//POST - Insert a new Film in the DB
+exports.addFilm = function(req, res) {
 	console.log('POST');
 	console.log(req.body);
 
-	var filmSchema = new FilmSchema({
+	var Film = new Film({
 		title: 			req.body.title,
 		director: 		req.body.director,
 		actors: 		req.body.actors,
@@ -40,39 +40,39 @@ exports.addFilmSchema = function(req, res) {
 		ratingCount: 	req.body.ratingCount
 	});
 
-	filmSchema.save(function(err, filmSchema) {
+	Film.save(function(err, Film) {
 		if(err) return res.send(500, err.message);
-    res.status(200).jsonp(filmSchema);
+    res.status(200).jsonp(Film);
 	});
 };
 
 //PUT - Update a register already exists
-exports.updateFilmSchema = function(req, res) {
+exports.updateFilm = function(req, res) {
 
-	FilmSchema.findById(req.params.id, function(err, filmSchema) {
-		filmSchema.title  			= req.body.title;
-		filmSchema.director  		= req.body.director;
-		filmSchema.actors  			= req.body.actors;
-		filmSchema.genres  			= req.body.genres;
-		filmSchema.topic  			= req.body.topic;
-		filmSchema.synopsis  		= req.body.synopsis;
-		filmSchema.originalTitle  	= req.body.originalTitle;
-		filmSchema.year  			= req.body.year;
-		filmSchema.country  		= req.body.country;
-		filmSchema.rating  			= req.body.rating;
-		filmSchema.ratingCount  	= req.body.ratingCount;
+	Film.findById(req.params.id, function(err, Film) {
+		Film.title  			= req.body.title;
+		Film.director  		= req.body.director;
+		Film.actors  			= req.body.actors;
+		Film.genres  			= req.body.genres;
+		Film.topic  			= req.body.topic;
+		Film.synopsis  		= req.body.synopsis;
+		Film.originalTitle  	= req.body.originalTitle;
+		Film.year  			= req.body.year;
+		Film.country  		= req.body.country;
+		Film.rating  			= req.body.rating;
+		Film.ratingCount  	= req.body.ratingCount;
 
-		filmSchema.save(function(err) {
+		Film.save(function(err) {
 			if(err) return res.send(500, err.message);
-      res.status(200).jsonp(filmSchema);
+      res.status(200).jsonp(Film);
 		});
 	});
 };
 
-//DELETE - Delete a FilmSchema with specified ID
-exports.deleteFilmSchema = function(req, res) {
-	FilmSchema.findById(req.params.id, function(err, filmSchema) {
-		filmSchema.remove(function(err) {
+//DELETE - Delete a Film with specified ID
+exports.deleteFilm = function(req, res) {
+	Film.findById(req.params.id, function(err, Film) {
+		Film.remove(function(err) {
 			if(err) return res.send(500, err.message);
       res.status(200);
 		})
